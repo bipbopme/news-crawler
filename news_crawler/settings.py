@@ -12,9 +12,8 @@ BOT_NAME = 'news_crawler'
 SPIDER_MODULES = ['news_crawler.spiders']
 NEWSPIDER_MODULE = 'news_crawler.spiders'
 
-
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-USER_AGENT = 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/83.0.4103.106 Safari/537.36'
+USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Safari/537.36'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -48,16 +47,21 @@ ROBOTSTXT_OBEY = True
 #    'news_crawler.middlewares.NewsCrawlerSpiderMiddleware': 543,
 #}
 
-ITEM_PIPELINES = {
-    'scrapyelasticsearch.scrapyelasticsearch.ElasticSearchPipeline': 500
+SPIDER_MIDDLEWARES = {
+    'scrapy_splash.SplashDeduplicateArgsMiddleware': 100,
 }
-
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #DOWNLOADER_MIDDLEWARES = {
 #    'news_crawler.middlewares.NewsCrawlerDownloaderMiddleware': 543,
 #}
+
+DOWNLOADER_MIDDLEWARES = {
+    'scrapy_splash.SplashCookiesMiddleware': 723,
+    'scrapy_splash.SplashMiddleware': 725,
+    'scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware': 810,
+}
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -70,6 +74,10 @@ ITEM_PIPELINES = {
 #ITEM_PIPELINES = {
 #    'news_crawler.pipelines.NewsCrawlerPipeline': 300,
 #}
+
+ITEM_PIPELINES = {
+    'scrapyelasticsearch.scrapyelasticsearch.ElasticSearchPipeline': 500,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
@@ -91,9 +99,13 @@ HTTPCACHE_EXPIRATION_SECS = 0
 HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+HTTPCACHE_STORAGE = 'scrapy_splash.SplashAwareFSCacheStorage'
 
 ELASTICSEARCH_SERVERS = ['localhost']
 ELASTICSEARCH_INDEX = 'news'
 # ELASTICSEARCH_INDEX_DATE_FORMAT = '%Y-%m'
 ELASTICSEARCH_TYPE = 'items'
 ELASTICSEARCH_UNIQ_KEY = 'id'
+
+DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
+SPLASH_URL = 'http://localhost:8050'

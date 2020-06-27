@@ -2,6 +2,7 @@ import scrapy
 import uuid
 import datetime
 import yaml
+from scrapy_splash import SplashRequest
 from newspaper import Article
 from newspaper import urls
 
@@ -9,6 +10,30 @@ class SiteSpider(scrapy.Spider):
     name = 'site'
 
     def start_requests(self):
+        lua_source = """
+            function main(splash)
+                local wait = 0.5
+                local num_scrolls = 5
+                local scroll_delay = 0.5
+
+                local scroll_to = splash:jsfunc("window.scrollTo")
+                local get_body_height = splash:jsfunc(
+                    "function() {return document.body.scrollHeight;}"
+                )
+
+                splash:set_viewport_size(411, 823)
+                assert(splash:go{splash.args.url, headers={["User-Agent"] = "Mozilla/5.0 (Linux; Android 8.0.0; Pixel 2 XL Build/OPD1.170816.004) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36"}})
+                splash:wait(wait)
+
+                for _ = 1, num_scrolls do
+                    scroll_to(0, get_body_height())
+                    splash:wait(scroll_delay)
+                end
+
+                return splash:html()
+            end
+        """
+
         batch_id = uuid.uuid4().hex
         batch_started_at = datetime.datetime.now()
 
@@ -17,7 +42,18 @@ class SiteSpider(scrapy.Spider):
 
         for site in sites:
             for section_type, url in site['sections'].items():
-                yield scrapy.Request(url=url, callback=self.parse, meta={'site_id': site['id'], 'section_type': section_type, 'batch_id': batch_id, 'batch_started_at': batch_started_at})
+                yield SplashRequest(
+                    url=url, 
+                    callback=self.parse,
+                    endpoint='execute',
+                    args={'lua_source': lua_source},
+                    meta={
+                        'site_id': site['id'], 
+                        'section_type': section_type, 
+                        'batch_id': batch_id, 
+                        'batch_started_at': batch_started_at
+                    }
+                )
 
     def parse(self, response):
         for i, href in enumerate(response.css('a::attr(href)').extract()):
