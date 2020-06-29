@@ -56,7 +56,6 @@ SPIDER_MIDDLEWARES = {
 #DOWNLOADER_MIDDLEWARES = {
 #    'news_crawler.middlewares.NewsCrawlerDownloaderMiddleware': 543,
 #}
-
 DOWNLOADER_MIDDLEWARES = {
     'scrapy_splash.SplashCookiesMiddleware': 723,
     'scrapy_splash.SplashMiddleware': 725,
@@ -71,12 +70,8 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    'news_crawler.pipelines.NewsCrawlerPipeline': 300,
-#}
-
 ITEM_PIPELINES = {
-    'scrapyelasticsearch.scrapyelasticsearch.ElasticSearchPipeline': 500,
+   'news_crawler.pipelines.NewsCrawlerPipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -96,16 +91,8 @@ ITEM_PIPELINES = {
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
 HTTPCACHE_ENABLED = True
 HTTPCACHE_EXPIRATION_SECS = 0
-HTTPCACHE_DIR = 'httpcache'
-#HTTPCACHE_IGNORE_HTTP_CODES = []
-#HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+HTTPCACHE_DIR = '/tmp/scrapy_cache'
 HTTPCACHE_STORAGE = 'scrapy_splash.SplashAwareFSCacheStorage'
-
-ELASTICSEARCH_SERVERS = ['localhost']
-ELASTICSEARCH_INDEX = 'news'
-# ELASTICSEARCH_INDEX_DATE_FORMAT = '%Y-%m'
-ELASTICSEARCH_TYPE = 'items'
-ELASTICSEARCH_UNIQ_KEY = 'id'
 
 DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
 SPLASH_URL = 'http://localhost:8050'

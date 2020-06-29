@@ -8,27 +8,23 @@ from scrapy_splash import SplashRequest
 from newspaper import Article
 from newspaper import urls
 
-EXTRA_ALLOWED_URLS = re.compile('(apnews.com/[a-z0-9])', re.IGNORECASE)
+EXTRA_ALLOWED_URLS = re.compile('(apnews.com/[a-z0-9])')
 
 class SiteSpider(scrapy.Spider):
     name = 'site'
 
     def start_requests(self):
-        batch_id = uuid.uuid4().hex
-        batch_started_at = datetime.datetime.now()
-
         for source in self.fetch_sources():
             for section in source['sections']:
                 yield SplashRequest(
                     url=section['url'],
                     callback=self.parse,
                     endpoint='execute',
-                    args={'lua_source': self.get_lua_source()},
+                    args={'lua_source': self.get_lua_source(), 'timeout': 15},
                     meta={
+                        'dont_cache': True,
                         'source_id': source['id'],
-                        'category': section['category'],
-                        'batch_id': batch_id,
-                        'batch_started_at': batch_started_at
+                        'category': section['category']
                     }
                 )
 
@@ -51,12 +47,8 @@ class SiteSpider(scrapy.Spider):
             og_description = response.css('meta[property="og:description"]::attr(content)').extract_first()
 
             yield {
-                'id': uuid.uuid4().hex,
                 'source_id': response.meta['source_id'],
                 'category': response.meta['category'],
-                'batch_id': response.meta['batch_id'],
-                'batch_started_at': response.meta['batch_started_at'],
-                'crawled_at': datetime.datetime.now(),
                 'position': response.meta['position'],
                 'title': article.title,
                 'authors': article.authors,
