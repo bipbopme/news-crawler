@@ -9,6 +9,7 @@ from newspaper import Article
 from newspaper import urls
 import logging
 import urltools
+import base64
 
 class SiteSpider(scrapy.Spider):
     name = 'site'
@@ -37,7 +38,8 @@ class SiteSpider(scrapy.Spider):
                         callback=self.parse,
                         endpoint='execute',
                         args={'lua_source': self.get_lua_source(), 'timeout': 60},
-                        meta=meta
+                        meta=meta,
+                        splash_headers={'Authorization': 'Basic ' + self.get_splash_auth()}
                     )
 
     def parse(self, response):
@@ -126,3 +128,7 @@ class SiteSpider(scrapy.Spider):
                 return splash:html()
             end
         """
+    
+    def get_splash_auth(self):
+        credentials = 'user:userpass'
+        return base64.b64encode(credentials.encode('ascii')).decode('ascii')
