@@ -32,12 +32,12 @@ class NewsCrawlerPipeline:
 
         link = {
             'id': link_id,
-            'article_id': article_id,
-            'source_id': source_id,
-            'category_id': item['category_id'],
-            'batch_id': self.batch_id,
-            'batch_started_at': self.batch_started_at,
-            'crawled_at': crawled_at,
+            'articleId': article_id,
+            'sourceId': source_id,
+            'categoryId': item['category_id'],
+            'batchId': self.batch_id,
+            'batchStartedAt': self.batch_started_at,
+            'crawledAt': crawled_at,
             'position': item['position'],
             'title': item['title'],
             'description': item['description'],
@@ -46,32 +46,33 @@ class NewsCrawlerPipeline:
 
         article = {
             'id': article_id,
-            'source_id': source_id,
-            'category_ids': [item['category_id']],
+            'sourceId': source_id,
+            'categoryIds': [item['category_id']],
             'title': item['title'],
             'authors': item['authors'],
             'description': item['description'],
             'text': item['text'],
             'image': item['image'],
-            'publish_date': item['publish_date'],
+            'publishDate': item['publish_date'],
             'url': item['url'],
-            'canonical_url': item['canonical_url'],
-            'amp_url': item['amp_url'],
-            'last_crawled_at': crawled_at,
+            'canonicalUrl': item['canonical_url'],
+            'ampUrl': item['amp_url'],
+            'firstCrawledAt': crawled_at,
+            'lastCrawledAt': crawled_at,
         }
 
         article_update = {
             'script': {
                 'source': """
-                    if (!ctx._source.category_ids.contains(params.category_id)) { 
-                        ctx._source.category_ids.add(params.category_id)
+                    if (!ctx._source.categoryIds.contains(params.categoryId)) { 
+                        ctx._source.categoryIds.add(params.categoryId)
                     }
-                    ctx._source.last_crawled_at = params.last_crawled_at
+                    ctx._source.lastCrawledAt = params.lastCrawledAt
                 """,
                 'lang': 'painless',
                 'params': {
-                    'category_id': item['category_id'],
-                    'last_crawled_at': crawled_at
+                    'categoryId': item['category_id'],
+                    'lastCrawledAt': crawled_at
                 }
             },
             'upsert': article
