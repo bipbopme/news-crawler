@@ -7,6 +7,8 @@ import re
 from scrapy_splash import SplashRequest
 from newspaper import Article
 from newspaper import urls
+import logging
+import urltools
 
 EXTRA_ALLOWED_URLS = re.compile('(apnews.com/[a-z0-9])')
 
@@ -24,7 +26,7 @@ class SiteSpider(scrapy.Spider):
                     meta={
                         'dont_cache': True,
                         'source_id': source['id'],
-                        'category': section['category']
+                        'category_id': section['categoryID']
                     }
                 )
 
@@ -32,14 +34,15 @@ class SiteSpider(scrapy.Spider):
         for i, href in enumerate(response.css('a::attr(href)').extract()):
             url = response.urljoin(href)
             
-            if urls.valid_url(url) or EXTRA_ALLOWED_URLS.search(url):
-                yield scrapy.Request(url=url, callback=self.parse_story, meta={**response.meta, 'position': i})
+            if self.is_valid_url(response, url):
+                yield scrapy.Request(url=url, callback=self.parse_article, meta={**response.meta, 'position': i})
 
-    def parse_story(self, response):
+    def parse_article(self, response):
+        url = response.request.url
         og_type = response.css('meta[property="og:type"]::attr(content)').extract_first()
 
         if og_type == "article":
-            article = Article(url=response.url, language='en')
+            article = Article(url=url, language='en')
             article.download(response.body)
             article.parse()
 
@@ -48,7 +51,7 @@ class SiteSpider(scrapy.Spider):
 
             yield {
                 'source_id': response.meta['source_id'],
-                'category': response.meta['category'],
+                'category_id': response.meta['category_id'],
                 'position': response.meta['position'],
                 'title': article.title,
                 'authors': article.authors,
@@ -56,11 +59,17 @@ class SiteSpider(scrapy.Spider):
                 'text': article.text,
                 'image': article.top_image,
                 'publish_date': article.publish_date,
-                'url': response.url,
+                'url': url,
                 'canonical_url': article.canonical_link,
                 'amp_url': amp_url
             }
     
+    def is_valid_url(self, response, url):
+        site_domain = urltools.parse(response.url).domain
+        url_domain = urltools.parse(url).domain
+
+        return (url_domain == site_domain and urls.valid_url(url)) or EXTRA_ALLOWED_URLS.search(url)
+
     def fetch_sources(self):   
         with urllib.request.urlopen("http://localhost:5500/api/sources") as url:
             return json.loads(url.read().decode())
