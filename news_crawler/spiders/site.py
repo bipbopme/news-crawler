@@ -17,8 +17,6 @@ class SiteSpider(scrapy.Spider):
         for source in self.fetch_sources():
             for section in source['sections']:
                 use_desktop = source.get('useDesktop', False)
-                logging.info(source)
-                logging.info(use_desktop)
 
                 meta = {
                     'dont_cache': True,
@@ -56,7 +54,7 @@ class SiteSpider(scrapy.Spider):
             
             if self.is_valid_url(response, url, text, custom_url_pattern):
                 i += 1
-                yield scrapy.Request(url=url, callback=self.parse_article, meta={**response.meta, 'position': i})
+                yield scrapy.Request(url=url, callback=self.parse_article, meta={**response.meta, 'dont_cache': False, 'position': i})
 
     def parse_article(self, response):
         url = response.request.url
