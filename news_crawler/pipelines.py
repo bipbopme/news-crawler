@@ -26,7 +26,7 @@ class NewsCrawlerPipeline:
 
     def process_item(self, item, spider):
         link_id = uuid.uuid4().hex
-        article_id = hashlib.sha384((item['canonical_url'] or item['url']).encode()).hexdigest()
+        article_id = hashlib.sha1((item['canonical_url'] or item['url']).encode()).hexdigest()
         source_id = item['source_id']
         crawled_at = datetime.datetime.now()
 
