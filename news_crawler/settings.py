@@ -8,6 +8,7 @@
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 BOT_NAME = 'news_crawler'
+LOG_LEVEL = 'WARN'
 
 SPIDER_MODULES = ['news_crawler.spiders']
 NEWSPIDER_MODULE = 'news_crawler.spiders'
@@ -48,7 +49,7 @@ ROBOTSTXT_OBEY = True
 #}
 
 SPIDER_MIDDLEWARES = {
-    'scrapy_splash.SplashDeduplicateArgsMiddleware': 100,
+    'scrapy_splash.SplashDeduplicateArgsMiddleware': 100
 }
 
 # Enable or disable downloader middlewares
@@ -59,7 +60,7 @@ SPIDER_MIDDLEWARES = {
 DOWNLOADER_MIDDLEWARES = {
     'scrapy_splash.SplashCookiesMiddleware': 723,
     'scrapy_splash.SplashMiddleware': 725,
-    'scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware': 810,
+    'scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware': 810
 }
 
 # Enable or disable extensions
@@ -71,7 +72,7 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'news_crawler.pipelines.NewsCrawlerPipeline': 300,
+   'news_crawler.pipelines.NewsCrawlerPipeline': 300
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
