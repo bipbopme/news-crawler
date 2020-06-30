@@ -10,34 +10,51 @@ from newspaper import urls
 import logging
 import urltools
 
-EXTRA_ALLOWED_URLS = re.compile('(apnews.com/[a-z0-9])')
-
 class SiteSpider(scrapy.Spider):
     name = 'site'
 
     def start_requests(self):
         for source in self.fetch_sources():
             for section in source['sections']:
-                yield SplashRequest(
-                    url=section['url'],
-                    callback=self.parse,
-                    endpoint='execute',
-                    args={'lua_source': self.get_lua_source(), 'timeout': 60},
-                    meta={
-                        'dont_cache': True,
-                        'source_id': source['id'],
-                        'category_id': section['categoryID']
-                    }
-                )
+                use_desktop = source.get('useDesktop', False)
+                logging.info(source)
+                logging.info(use_desktop)
+
+                meta = {
+                    'dont_cache': True,
+                    'source_id': source['id'],
+                    'category_id': section['categoryId'],
+                    'custom_url_pattern': source.get('customUrlPattern', None)
+                }
+
+                if use_desktop:
+                    yield scrapy.Request(
+                        url=section['url'],
+                        callback=self.parse,
+                        meta=meta
+                    )
+                else:
+                    yield SplashRequest(
+                        url=section['url'],
+                        callback=self.parse,
+                        endpoint='execute',
+                        args={'lua_source': self.get_lua_source(), 'timeout': 60},
+                        meta=meta
+                    )
 
     def parse(self, response):
+        if response.meta.get('custom_url_pattern', None):
+            custom_url_pattern = re.compile(response.meta['custom_url_pattern'])
+        else:
+            custom_url_pattern = None
+
         i = 0
         for a in response.css('a'):
             text = " ".join(a.css('*::text').getall())
             href = a.css('::attr(href)').get()
             url = response.urljoin(href)
             
-            if self.is_valid_url(response, url, text):
+            if self.is_valid_url(response, url, text, custom_url_pattern):
                 i += 1
                 yield scrapy.Request(url=url, callback=self.parse_article, meta={**response.meta, 'position': i})
 
@@ -45,7 +62,8 @@ class SiteSpider(scrapy.Spider):
         url = response.request.url
         og_type = response.css('meta[property="og:type"]::attr(content)').extract_first()
 
-        if og_type == "article":
+        # Allow custom url pattern to override article detection
+        if og_type == "article" or 'custom_url_pattern' in response.meta:
             article = Article(url=url, language='en')
             article.download(response.body)
             article.parse()
@@ -68,12 +86,16 @@ class SiteSpider(scrapy.Spider):
                 'amp_url': amp_url
             }
     
-    def is_valid_url(self, response, url, text):
-        site_domain = urltools.parse(response.url).domain
-        url_domain = urltools.parse(url).domain
+    def is_valid_url(self, response, url, text, custom_url_pattern):
         word_count = len(re.split('\\s+', text.strip())) if text else 0
 
-        return word_count >= 5 and ((url_domain == site_domain and urls.valid_url(url)) or EXTRA_ALLOWED_URLS.search(url))
+        if custom_url_pattern:
+            return word_count >= 5 and custom_url_pattern.search(url)
+        else:
+            site_domain = urltools.parse(response.url).domain
+            url_domain = urltools.parse(url).domain
+
+            return word_count >= 5 and url_domain == site_domain and urls.valid_url(url)
 
     def fetch_sources(self):   
         with urllib.request.urlopen("http://localhost:5500/api/sources") as url:
