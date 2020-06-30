@@ -31,10 +31,14 @@ class SiteSpider(scrapy.Spider):
                 )
 
     def parse(self, response):
-        for i, href in enumerate(response.css('a::attr(href)').extract()):
+        i = 0
+        for a in response.css('a'):
+            text = a.css('::text').get()
+            href = a.css('::attr(href)').get()
             url = response.urljoin(href)
             
-            if self.is_valid_url(response, url):
+            if self.is_valid_url(response, url, text):
+                i += 1
                 yield scrapy.Request(url=url, callback=self.parse_article, meta={**response.meta, 'position': i})
 
     def parse_article(self, response):
@@ -64,11 +68,12 @@ class SiteSpider(scrapy.Spider):
                 'amp_url': amp_url
             }
     
-    def is_valid_url(self, response, url):
+    def is_valid_url(self, response, url, text):
         site_domain = urltools.parse(response.url).domain
         url_domain = urltools.parse(url).domain
+        word_count = len(text.strip().split(' ')) if text else 0
 
-        return (url_domain == site_domain and urls.valid_url(url)) or EXTRA_ALLOWED_URLS.search(url)
+        return word_count >= 5 and ((url_domain == site_domain and urls.valid_url(url)) or EXTRA_ALLOWED_URLS.search(url))
 
     def fetch_sources(self):   
         with urllib.request.urlopen("http://localhost:5500/api/sources") as url:
