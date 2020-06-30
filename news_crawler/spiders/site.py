@@ -22,7 +22,7 @@ class SiteSpider(scrapy.Spider):
                     url=section['url'],
                     callback=self.parse,
                     endpoint='execute',
-                    args={'lua_source': self.get_lua_source(), 'timeout': 15},
+                    args={'lua_source': self.get_lua_source(), 'timeout': 60},
                     meta={
                         'dont_cache': True,
                         'source_id': source['id'],
@@ -33,7 +33,7 @@ class SiteSpider(scrapy.Spider):
     def parse(self, response):
         i = 0
         for a in response.css('a'):
-            text = a.css('::text').get()
+            text = " ".join(a.css('*::text').getall())
             href = a.css('::attr(href)').get()
             url = response.urljoin(href)
             
@@ -71,7 +71,7 @@ class SiteSpider(scrapy.Spider):
     def is_valid_url(self, response, url, text):
         site_domain = urltools.parse(response.url).domain
         url_domain = urltools.parse(url).domain
-        word_count = len(text.strip().split(' ')) if text else 0
+        word_count = len(re.split('\\s+', text.strip())) if text else 0
 
         return word_count >= 5 and ((url_domain == site_domain and urls.valid_url(url)) or EXTRA_ALLOWED_URLS.search(url))
 
@@ -82,13 +82,16 @@ class SiteSpider(scrapy.Spider):
     def get_lua_source(self):
         return """
             function main(splash)
-                local wait = 0.5
+                splash.images_enabled = false
+                splash.resource_timeout = 10.0
+
+                local wait = 1.0
                 local num_scrolls = 5
                 local scroll_delay = 0.5
 
                 local scroll_to = splash:jsfunc("window.scrollTo")
                 local get_body_height = splash:jsfunc(
-                    "function() {return document.body.scrollHeight;}"
+                    "function() {return document.documentElement.scrollHeight || 0;}"
                 )
 
                 splash:set_viewport_size(411, 823)
