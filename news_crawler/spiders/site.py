@@ -10,6 +10,8 @@ from newspaper import urls
 import logging
 import urltools
 import base64
+import requests
+import hashlib
 
 class SiteSpider(scrapy.Spider):
     name = 'site'
@@ -56,35 +58,49 @@ class SiteSpider(scrapy.Spider):
             
             if self.is_valid_url(response, url, text, custom_url_pattern):
                 i += 1
+                # logging.info(url)
                 yield scrapy.Request(url=url, callback=self.parse_article, meta={**response.meta, 'dont_cache': False, 'position': i})
 
     def parse_article(self, response):
         url = response.request.url
+        canonical_url = response.css('link[rel="canonical"]::attr(href)').extract_first()
         og_type = response.css('meta[property="og:type"]::attr(content)').extract_first()
 
         # Allow custom url pattern to override article detection
         if og_type == "article" or 'custom_url_pattern' in response.meta:
-            article = Article(url=url, language='en')
-            article.download(response.body)
-            article.parse()
+            if self.article_exists(canonical_url or url):
+                yield {
+                    'source_id': response.meta['source_id'],
+                    'category_id': response.meta['category_id'],
+                    'position': response.meta['position'],
+                    'url': url,
+                    'canonical_url': canonical_url,
+                    'exists': True
+                }
+            else:
+                article = Article(url=url, language='en')
+                article.download(response.body)
+                article.parse()
 
-            amp_url = response.css('link[rel="amphtml"]::attr(href)').extract_first()
-            og_description = response.css('meta[property="og:description"]::attr(content)').extract_first()
+                amp_url = response.css('link[rel="amphtml"]::attr(href)').extract_first()
+                og_description = response.css('meta[property="og:description"]::attr(content)').extract_first()
 
-            yield {
-                'source_id': response.meta['source_id'],
-                'category_id': response.meta['category_id'],
-                'position': response.meta['position'],
-                'title': article.title,
-                'authors': article.authors,
-                'description': og_description,
-                'text': article.text,
-                'image': article.top_image,
-                'publish_date': article.publish_date,
-                'url': url,
-                'canonical_url': article.canonical_link,
-                'amp_url': amp_url
-            }
+                yield {
+                    'source_id': response.meta['source_id'],
+                    'category_id': response.meta['category_id'],
+                    'position': response.meta['position'],
+                    'title': article.title,
+                    'authors': article.authors,
+                    'description': og_description,
+                    'text': article.text,
+                    'image_url': article.top_image,
+                    'publish_date': article.publish_date,
+                    'url': url,
+                    'canonical_url': canonical_url,
+                    'amp_url': amp_url,
+                    'exists': False
+                }
+
     
     def is_valid_url(self, response, url, text, custom_url_pattern):
         word_count = len(re.split('\\s+', text.strip())) if text else 0
@@ -132,3 +148,9 @@ class SiteSpider(scrapy.Spider):
     def get_splash_auth(self):
         credentials = 'user:userpass'
         return base64.b64encode(credentials.encode('ascii')).decode('ascii')
+    
+    def article_exists(self, url):
+        id = hashlib.sha1(url.encode()).hexdigest()
+        r = requests.get('http://localhost:9200/articles/_doc/' + id +'?stored_fields=_id')
+
+        return r.status_code == 200

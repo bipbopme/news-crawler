@@ -29,6 +29,7 @@ class NewsCrawlerPipeline:
         article_id = hashlib.sha1((item['canonical_url'] or item['url']).encode()).hexdigest()
         source_id = item['source_id']
         crawled_at = datetime.datetime.now()
+        article_exists = item['exists']
 
         link = {
             'id': link_id,
@@ -38,54 +39,54 @@ class NewsCrawlerPipeline:
             'batchId': self.batch_id,
             'batchStartedAt': self.batch_started_at,
             'crawledAt': crawled_at,
-            'position': item['position'],
-            'title': item['title'],
-            'description': item['description'],
-            'url': item['url']
+            'position': item['position']
         }
 
-        article = {
-            'id': article_id,
-            'sourceId': source_id,
-            'categoryIds': [item['category_id']],
-            'title': item['title'],
-            'authors': item['authors'],
-            'description': item['description'],
-            'text': item['text'],
-            'image': item['image'],
-            'publishDate': item['publish_date'],
-            'url': item['url'],
-            'canonicalUrl': item['canonical_url'],
-            'ampUrl': item['amp_url'],
-            'firstCrawledAt': crawled_at,
-            'lastCrawledAt': crawled_at,
-        }
+        self.es.index(index="links", id=link_id, body=link)
 
-        article_update = {
-            'script': {
-                'source': """
-                    if (!ctx._source.categoryIds.contains(params.categoryId)) { 
-                        ctx._source.categoryIds.add(params.categoryId)
+        if article_exists:
+            article_update = {
+                'script': {
+                    'source': """
+                        if (!ctx._source.categoryIds.contains(params.categoryId)) { 
+                            ctx._source.categoryIds.add(params.categoryId)
+                        }
+                        ctx._source.lastSeenAt = params.lastSeenAt
+                    """,
+                    'lang': 'painless',
+                    'params': {
+                        'categoryId': item['category_id'],
+                        'lastSeenAt': crawled_at
                     }
-                    ctx._source.lastCrawledAt = params.lastCrawledAt
-                """,
-                'lang': 'painless',
-                'params': {
-                    'categoryId': item['category_id'],
-                    'lastCrawledAt': crawled_at
                 }
-            },
-            'upsert': article
-        }
+            }
+            
+            self.es.update(index="articles", id=article_id, body=article_update)
+        else:
+            article = {
+                'id': article_id,
+                'sourceId': source_id,
+                'categoryIds': [item['category_id']],
+                'title': item['title'],
+                'authors': item['authors'],
+                'description': item['description'],
+                'text': item['text'],
+                'imageUrl': item['image_url'],
+                'publishDate': item['publish_date'],
+                'url': item['url'],
+                'canonicalUrl': item['canonical_url'],
+                'ampUrl': item['amp_url'],
+                'firstSeenAt': crawled_at,
+                'lastSeenAt': crawled_at,
+            }
 
+            self.es.index(index="articles", id=article_id, body=article)
+
+        # Stats
         self.link_count += 1
-
         if source_id in self.link_count_by_source:
             self.link_count_by_source[source_id] = self.link_count_by_source[source_id] + 1
         else:
             self.link_count_by_source[source_id] = 1
-
-        self.es.index(index="links", id=link_id, body=link)
-        self.es.update(index="articles", id=article_id, body=article_update)
 
         return item
