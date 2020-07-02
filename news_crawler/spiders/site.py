@@ -129,7 +129,7 @@ class SiteSpider(scrapy.Spider):
 
                 local scroll_to = splash:jsfunc("window.scrollTo")
                 local get_body_height = splash:jsfunc(
-                    "function() {return document.documentElement.scrollHeight || 0;}"
+                    "function() {return document.body.scrollHeight;}"
                 )
 
                 splash:set_viewport_size(411, 823)
