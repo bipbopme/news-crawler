@@ -71,6 +71,7 @@ class NewsCrawlerPipeline:
                 'authors': item['authors'],
                 'description': item['description'],
                 'text': item['text'],
+                'clusterText': "%s %s %s" %(item['title'], item['description'], item['text']),
                 'imageUrl': item['image_url'],
                 'publishDate': item['publish_date'],
                 'url': item['url'],
