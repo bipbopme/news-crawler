@@ -39,7 +39,7 @@ class SiteSpider(scrapy.Spider):
                         url=section['url'],
                         callback=self.parse,
                         endpoint='execute',
-                        args={'lua_source': self.get_lua_source(), 'timeout': 60},
+                        args={'lua_source': self.get_lua_source(), 'timeout': 120},
                         meta=meta,
                         splash_headers={'Authorization': 'Basic ' + self.get_splash_auth()}
                     )
@@ -120,6 +120,7 @@ class SiteSpider(scrapy.Spider):
     def get_lua_source(self):
         return """
             function main(splash)
+                splash:set_user_agent("Mozilla/5.0 (Linux; Android 8.0.0; Pixel 2 XL Build/OPD1.170816.004) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36")
                 splash.images_enabled = false
                 splash.resource_timeout = 10.0
 
@@ -133,8 +134,12 @@ class SiteSpider(scrapy.Spider):
                 )
 
                 splash:set_viewport_size(411, 823)
-                assert(splash:go{splash.args.url, headers={["User-Agent"] = "Mozilla/5.0 (Linux; Android 8.0.0; Pixel 2 XL Build/OPD1.170816.004) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36"}})
+                assert(splash:go{splash.args.url})
                 splash:wait(wait)
+
+                while not splash:select('body') do
+                    splash:wait(0.1)
+                end
 
                 for _ = 1, num_scrolls do
                     scroll_to(0, get_body_height())
