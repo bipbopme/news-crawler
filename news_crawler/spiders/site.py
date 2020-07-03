@@ -23,6 +23,7 @@ class SiteSpider(scrapy.Spider):
 
                 meta = {
                     'dont_cache': True,
+                    'max_retry_times': 10,
                     'source_id': source['id'],
                     'category_id': section['categoryId'],
                     'custom_url_pattern': source.get('customUrlPattern', None)
@@ -39,7 +40,7 @@ class SiteSpider(scrapy.Spider):
                         url=section['url'],
                         callback=self.parse,
                         endpoint='execute',
-                        args={'lua_source': self.get_lua_source(), 'timeout': 120},
+                        args={'lua_source': self.get_lua_source(), 'timeout': 60},
                         meta=meta,
                         splash_headers={'Authorization': 'Basic ' + self.get_splash_auth()}
                     )
@@ -59,7 +60,7 @@ class SiteSpider(scrapy.Spider):
             if self.is_valid_url(response, url, text, custom_url_pattern):
                 i += 1
                 # logging.info(url)
-                yield scrapy.Request(url=url, callback=self.parse_article, meta={**response.meta, 'dont_cache': False, 'position': i})
+                yield scrapy.Request(url=url, callback=self.parse_article, meta={**response.meta, 'dont_cache': False, 'max_retry_times': 2, 'position': i})
 
     def parse_article(self, response):
         url = response.request.url
