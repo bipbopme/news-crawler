@@ -17,7 +17,7 @@ incremental==17.5.0
 itemadapter==0.1.0
 jieba3k==0.35.1
 joblib==0.15.1
-lxml==4.5.1
+lxml==4.6.3
 newspaper3k==0.2.8
 nltk==3.5
 parsel==1.6.0
