@@ -45,7 +45,7 @@ soupsieve==2.0.1
 tinysegmenter==0.3
 tldextract==2.2.2
 tqdm==4.46.1
-Twisted==20.3.0
+Twisted==22.2.0
 urllib3==1.25.9
 urltools==0.3.2
 w3lib==1.22.0
